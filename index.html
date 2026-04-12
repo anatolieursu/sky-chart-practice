@@ -252,7 +252,6 @@
   <button class="btn" id="save-map-btn">Save map</button>
   <button class="btn" id="export-png-btn">Export PNG</button>
   <button class="btn" id="load-folder-btn">📁 Load folder with images (all .png)</button>
-  <button class="btn" id="reset-demo-btn">Reset to demo maps</button>
   <div class="sep"></div>
   <div id="tools">
     <button class="tool on" id="t-pen" title="Pen">✏</button>
@@ -731,10 +730,6 @@
     let container = document.getElementById('saved-list');
     if (!container) return;
     container.innerHTML = '';
-    if (!savedMaps.length) {
-      container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text3);">No maps. Click "Reset to demo maps" or load a folder.</div>';
-      return;
-    }
     savedMaps.forEach(m => {
       let div = document.createElement('div');
       div.className = 'map-card';
@@ -773,6 +768,7 @@
       let addedCount = 0;
       for (let file of pngFiles) {
         let name = file.name.replace(/\.png$/i, '');
+        // check if already exists (by name)
         if (savedMaps.some(m => m.name === name)) continue;
         let url = URL.createObjectURL(file);
         await new Promise((resolve) => {
@@ -817,94 +813,17 @@
     input.click();
   }
 
-  // --------------------------------------------------------------
-  // Generate demo maps (canvas-based)
-  // --------------------------------------------------------------
-  function generateDemoMaps() {
-    const demos = [
-      { name: "Winter Sky (Orion & Taurus)", draw: (ctx,w,h) => {
-          ctx.fillStyle = "#ffdd88";
-          ctx.beginPath(); ctx.arc(250,150,3,0,2*Math.PI); ctx.fill();
-          ctx.fillStyle = "#aaccff";
-          ctx.beginPath(); ctx.arc(320,180,4,0,2*Math.PI); ctx.fill();
-          ctx.fillStyle = "#ffccaa";
-          ctx.beginPath(); ctx.arc(200,200,3,0,2*Math.PI); ctx.fill();
-          ctx.fillStyle = "#fff";
-          ctx.font = "10px monospace";
-          ctx.fillText("Orion", 300,160);
-          ctx.fillText("Taurus", 180,190);
-        } },
-      { name: "Summer Sky (Cygnus, Lyra)", draw: (ctx,w,h) => {
-          ctx.fillStyle = "#ffffff";
-          ctx.beginPath(); ctx.arc(300,120,4,0,2*Math.PI); ctx.fill();
-          ctx.beginPath(); ctx.arc(400,180,3,0,2*Math.PI); ctx.fill();
-          ctx.beginPath(); ctx.arc(200,200,3,0,2*Math.PI); ctx.fill();
-          ctx.fillText("Vega", 300,100);
-          ctx.fillText("Deneb", 410,170);
-          ctx.fillText("Altair", 180,210);
-        } },
-      { name: "Equatorial Sky (Orion, Canis Major)", draw: (ctx,w,h) => {
-          ctx.fillStyle = "#ffffaa";
-          ctx.beginPath(); ctx.arc(250,180,3,0,2*Math.PI); ctx.fill();
-          ctx.beginPath(); ctx.arc(350,200,4,0,2*Math.PI); ctx.fill();
-          ctx.fillText("Sirius", 340,190);
-          ctx.fillText("Betelgeuse", 230,170);
-        } }
-    ];
-    let maps = [];
-    demos.forEach((demo, idx) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 500; canvas.height = 350;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = "#0a0a2a";
-      ctx.fillRect(0,0,500,350);
-      ctx.fillStyle = "#fff";
-      ctx.font = "12px monospace";
-      ctx.fillText(demo.name, 20, 30);
-      demo.draw(ctx, 500, 350);
-      const fullData = canvas.toDataURL('image/jpeg', 0.85);
-      const thumbCanvas = document.createElement('canvas');
-      thumbCanvas.width = 100; thumbCanvas.height = 70;
-      const tctx = thumbCanvas.getContext('2d');
-      tctx.drawImage(canvas, 0, 0, 100, 70);
-      const thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
-      maps.push({
-        id: Date.now() + idx + 20000,
-        name: demo.name,
-        fullData: fullData,
-        thumb: thumb,
-        date: new Date().toISOString(),
-        taskSnapshot: tasks.map(t => ({ id: t.id, done: false }))
-      });
-    });
-    return maps;
-  }
-
-  function resetToDemoMaps() {
-    savedMaps = generateDemoMaps();
-    localStorage.setItem('skychart_full_maps', JSON.stringify(savedMaps));
-    renderSavedMaps();
-    hint("Reset to demo maps.");
-  }
-
-  document.getElementById('reset-demo-btn').onclick = resetToDemoMaps;
   document.getElementById('load-folder-btn').onclick = loadAllImagesFromFolder;
 
   // --------------------------------------------------------------
-  // Load stored maps or initialize with demos
+  // No demo maps — start with empty savedMaps array
   // --------------------------------------------------------------
-  function loadStoredMaps() {
+  async function loadStoredMaps() {
     let stored = localStorage.getItem('skychart_full_maps');
     if (stored && stored !== '[]') {
-      try {
-        savedMaps = JSON.parse(stored);
-        if (!savedMaps.length) throw new Error("empty");
-      } catch(e) {
-        savedMaps = generateDemoMaps();
-        localStorage.setItem('skychart_full_maps', JSON.stringify(savedMaps));
-      }
+      savedMaps = JSON.parse(stored);
     } else {
-      savedMaps = generateDemoMaps();
+      savedMaps = [];   // start empty, no demo maps
       localStorage.setItem('skychart_full_maps', JSON.stringify(savedMaps));
     }
     renderSavedMaps();
@@ -1024,10 +943,11 @@
   // Start
   buildTasks();
   renderTaskList();
-  loadStoredMaps();
-  buildCalculator();
-  setTool('pen');
-  hint("Ready. Demo maps loaded. Use 'Load folder with images' to add your own .png files.");
+  loadStoredMaps().then(() => {
+    buildCalculator();
+    setTool('pen');
+    hint("Ready. Click 'Load folder with images' to import all .png files from your folder.");
+  });
 </script>
 </body>
 </html>
