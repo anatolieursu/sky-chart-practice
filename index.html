@@ -816,78 +816,17 @@
   document.getElementById('load-folder-btn').onclick = loadAllImagesFromFolder;
 
   // --------------------------------------------------------------
-  // Generate fallback demo maps (only if no saved maps at all)
+  // No demo maps — start with empty savedMaps array
   // --------------------------------------------------------------
-  function generateFallbackDemoMaps() {
-    const demos = [
-      { name: "Winter Sky (Orion & Taurus)", draw: (ctx,w,h) => {
-          ctx.fillStyle = "#ffdd88";
-          ctx.beginPath(); ctx.arc(250,150,3,0,2*Math.PI); ctx.fill();
-          ctx.fillStyle = "#aaccff";
-          ctx.beginPath(); ctx.arc(320,180,4,0,2*Math.PI); ctx.fill();
-          ctx.fillStyle = "#ffccaa";
-          ctx.beginPath(); ctx.arc(200,200,3,0,2*Math.PI); ctx.fill();
-          ctx.fillStyle = "#fff";
-          ctx.font = "10px monospace";
-          ctx.fillText("Orion", 300,160);
-          ctx.fillText("Taurus", 180,190);
-        } },
-      { name: "Summer Sky (Cygnus, Lyra)", draw: (ctx,w,h) => {
-          ctx.fillStyle = "#ffffff";
-          ctx.beginPath(); ctx.arc(300,120,4,0,2*Math.PI); ctx.fill();
-          ctx.beginPath(); ctx.arc(400,180,3,0,2*Math.PI); ctx.fill();
-          ctx.beginPath(); ctx.arc(200,200,3,0,2*Math.PI); ctx.fill();
-          ctx.fillText("Vega", 300,100);
-          ctx.fillText("Deneb", 410,170);
-          ctx.fillText("Altair", 180,210);
-        } },
-      { name: "Equatorial Sky (Orion, Canis Major)", draw: (ctx,w,h) => {
-          ctx.fillStyle = "#ffffaa";
-          ctx.beginPath(); ctx.arc(250,180,3,0,2*Math.PI); ctx.fill();
-          ctx.beginPath(); ctx.arc(350,200,4,0,2*Math.PI); ctx.fill();
-          ctx.fillText("Sirius", 340,190);
-          ctx.fillText("Betelgeuse", 230,170);
-        } }
-    ];
-    let maps = [];
-    demos.forEach((demo, idx) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 500; canvas.height = 350;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = "#0a0a2a";
-      ctx.fillRect(0,0,500,350);
-      ctx.fillStyle = "#fff";
-      ctx.font = "12px monospace";
-      ctx.fillText(demo.name, 20, 30);
-      demo.draw(ctx, 500, 350);
-      const fullData = canvas.toDataURL('image/jpeg', 0.85);
-      const thumbCanvas = document.createElement('canvas');
-      thumbCanvas.width = 100; thumbCanvas.height = 70;
-      const tctx = thumbCanvas.getContext('2d');
-      tctx.drawImage(canvas, 0, 0, 100, 70);
-      const thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
-      maps.push({
-        id: Date.now() + idx + 20000,
-        name: demo.name,
-        fullData: fullData,
-        thumb: thumb,
-        date: new Date().toISOString(),
-        taskSnapshot: tasks.map(t => ({ id: t.id, done: false }))
-      });
-    });
-    return maps;
-  }
-
   async function loadStoredMaps() {
     let stored = localStorage.getItem('skychart_full_maps');
     if (stored && stored !== '[]') {
       savedMaps = JSON.parse(stored);
-      renderSavedMaps();
     } else {
-      savedMaps = generateFallbackDemoMaps();
+      savedMaps = [];   // start empty, no demo maps
       localStorage.setItem('skychart_full_maps', JSON.stringify(savedMaps));
-      renderSavedMaps();
     }
+    renderSavedMaps();
   }
 
   // --------------------------------------------------------------
@@ -1007,7 +946,7 @@
   loadStoredMaps().then(() => {
     buildCalculator();
     setTool('pen');
-    hint("Ready. Click 'Load folder with images' to import all .png files from any folder.");
+    hint("Ready. Click 'Load folder with images' to import all .png files from your folder.");
   });
 </script>
 </body>
