@@ -1,0 +1,31 @@
+{
+  "title": "Examen Observațional #1",
+  "image": "./wholeskychart.png",
+  "tasks": {
+    "directions": {
+      "enabled": true,
+      "items": ["N", "S", "E", "V"]
+    },
+    "zenit": true,
+    "pnc": true,
+    "lst": true,
+    "month": false,
+    "constellations": [
+      "Orion",
+      "Taurus",
+      "Gemini",
+      "Canis Major",
+      "Canis Minor",
+      "Auriga",
+      "Perseus",
+      "Eridanus"
+    ],
+    "messier": [
+      "M42",
+      "M45",
+      "M1",
+      "M35",
+      "M36"
+    ]
+  }
+}
