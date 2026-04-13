@@ -140,10 +140,10 @@
     // ================================================================
     const DEFAULT_IMAGES = [
         'lat90long0.png',
-        'lat-90long0.png'
-        // add more filenames here, e.g.:
-        // 'wholeskychart.png',
-        // 'lat45long90.png'
+        'lat-90long0.png',
+        ...Array.from({ length: 102 }, (_, i) =>
+            `A_Star_Map_A_Day-${String(i + 1).padStart(3, '0')}.png`
+        )
     ];
     const SKYCHARTS_FOLDER = './skycharts/';
     // ================================================================
