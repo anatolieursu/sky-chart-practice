@@ -1,953 +1,504 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SkyChart · Astronomy Tasks</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    :root {
-      --bg: #f8f8f6;
-      --bg2: #f0f0ec;
-      --bg3: #e8e8e4;
-      --border: #d8d8d4;
-      --border2: #c0c0bc;
-      --text: #1a1a18;
-      --text2: #666660;
-      --text3: #aaa;
-      --green: #2a6a2a;
-      --green-bg: #eaf4ea;
-    }
-    body {
-      height: 100vh;
-      background: var(--bg);
-      color: var(--text);
-      font-family: monospace;
-      font-size: 13px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-    #top {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 12px;
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
-      flex-shrink: 0;
-    }
-    #logo { font-weight: bold; font-size: 12px; }
-    .sep { width: 1px; height: 20px; background: var(--border); }
-    .btn {
-      background: #fff;
-      border: 1px solid var(--border);
-      color: var(--text2);
-      padding: 4px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-family: monospace;
-      font-size: 11px;
-    }
-    .btn:hover { border-color: var(--border2); background: var(--bg2); }
-    .btn.green { border-color: #b0d4b0; color: var(--green); }
-    .tool {
-      background: #fff;
-      border: 1px solid var(--border);
-      width: 32px;
-      height: 28px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .tool.on { background: var(--text); color: #fff; border-color: var(--text); }
-    #tools { display: flex; gap: 3px; flex-wrap: wrap; }
-    #col-in { width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 4px; }
-    #sz-in { width: 70px; }
-    #sp { flex: 1; }
-
-    #main { display: flex; flex: 1; overflow: hidden; }
-    #sidebar {
-      width: 340px;
-      background: #fff;
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    #task-header {
-      padding: 8px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    #task-search {
-      flex: 1;
-      padding: 4px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-family: monospace;
-    }
-    .category-filter {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 6px;
-    }
-    .cat-btn {
-      font-size: 10px;
-      padding: 3px 8px;
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      cursor: pointer;
-    }
-    .cat-btn.active { background: var(--text); color: white; border-color: var(--text); }
-    #task-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 6px;
-    }
-    .task-cat {
-      font-size: 10px;
-      font-weight: bold;
-      color: var(--text3);
-      margin: 10px 0 4px 0;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .task-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 4px;
-      font-size: 11px;
-      border-left: 2px solid transparent;
-      cursor: pointer;
-    }
-    .task-item:hover { background: var(--bg2); }
-    .task-item.done { text-decoration: line-through; color: var(--text3); }
-    .task-item input { margin-right: 4px; }
-    .task-label { flex: 1; }
-
-    #saved-maps-pane { display: none; flex-direction: column; height: 100%; }
-    #saved-list { flex: 1; overflow-y: auto; padding: 6px; }
-    .map-card {
-      display: flex;
-      gap: 8px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px;
-      margin-bottom: 6px;
-      cursor: pointer;
-      background: #fff;
-    }
-    .map-card:hover { background: var(--bg2); }
-    .map-thumb { width: 50px; height: 40px; object-fit: cover; border-radius: 4px; }
-    .map-info { flex: 1; font-size: 10px; }
-    .map-title { font-weight: bold; }
-    .map-actions button { background: none; border: none; cursor: pointer; margin-left: 4px; }
-
-    #stage {
-      flex: 1;
-      position: relative;
-      background: var(--bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-    canvas { position: absolute; display: block; }
-    #bg-c { z-index: 1; }
-    #dr-c { z-index: 2; cursor: crosshair; }
-    #ruler-canvas { z-index: 3; pointer-events: none; }
-    #empty {
-      position: absolute;
-      z-index: 0;
-      text-align: center;
-      color: var(--text3);
-      background: rgba(255,255,245,0.8);
-      padding: 20px;
-      border-radius: 12px;
-    }
-    #hint {
-      position: absolute;
-      bottom: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 14px;
-      font-size: 10px;
-      white-space: nowrap;
-      z-index: 30;
-      opacity: 0;
-      transition: 0.2s;
-    }
-    #hint.show { opacity: 1; }
-
-    /* calculator modal */
-    #calc-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 200;
-    }
-    .calc-panel {
-      background: #fff;
-      border-radius: 12px;
-      width: 380px;
-      padding: 16px;
-      font-family: monospace;
-    }
-    .calc-display {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px;
-      font-size: 20px;
-      text-align: right;
-      margin-bottom: 12px;
-      min-height: 60px;
-    }
-    .calc-buttons {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 6px;
-    }
-    .calc-buttons button {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 8px 4px;
-      font-family: monospace;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .calc-buttons button.operator { background: #f0f0ec; color: var(--green); }
-    .calc-buttons button.equals { background: var(--green); color: white; }
-    .calc-buttons button.clear { background: #ffe6e6; color: #c00; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyChart · Astronomy Tasks</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #f8f8f6; --bg2: #f0f0ec; --bg3: #e8e8e4;
+            --border: #d8d8d4; --border2: #c0c0bc;
+            --text: #1a1a18; --text2: #666660; --text3: #aaa;
+            --green: #2a6a2a; --green-bg: #eaf4ea;
+        }
+        body { height: 100vh; background: var(--bg); color: var(--text); font-family: monospace; font-size: 13px; overflow: hidden; display: flex; flex-direction: column; }
+        #top { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #fff; border-bottom: 1px solid var(--border); flex-wrap: wrap; flex-shrink: 0; }
+        #logo { font-weight: bold; font-size: 12px; }
+        .sep { width: 1px; height: 20px; background: var(--border); }
+        .btn { background: #fff; border: 1px solid var(--border); color: var(--text2); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 11px; }
+        .btn:hover { border-color: var(--border2); background: var(--bg2); }
+        .tool { background: #fff; border: 1px solid var(--border); width: 32px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; }
+        .tool.on { background: var(--text); color: #fff; border-color: var(--text); }
+        #tools { display: flex; gap: 3px; flex-wrap: wrap; }
+        #sp { flex: 1; }
+        #main { display: flex; flex: 1; overflow: hidden; }
+        #sidebar { width: 340px; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+        #task-header { padding: 8px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        #task-search { flex: 1; padding: 4px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; }
+        .category-filter { display: flex; gap: 6px; margin-bottom: 6px; }
+        .cat-btn { font-size: 10px; padding: 3px 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
+        .cat-btn.active { background: var(--text); color: white; border-color: var(--text); }
+        #task-list { flex: 1; overflow-y: auto; padding: 6px; }
+        .task-cat { font-size: 10px; font-weight: bold; color: var(--text3); margin: 10px 0 4px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .task-item { display: flex; align-items: center; gap: 6px; padding: 4px 4px; font-size: 11px; border-left: 2px solid transparent; cursor: pointer; }
+        .task-item:hover { background: var(--bg2); }
+        .task-item.done { text-decoration: line-through; color: var(--text3); }
+        .task-label { flex: 1; }
+        #saved-maps-pane { display: none; flex-direction: column; height: 100%; }
+        #saved-list { flex: 1; overflow-y: auto; padding: 6px; }
+        .map-card { display: flex; gap: 8px; border: 1px solid var(--border); border-radius: 6px; padding: 6px; margin-bottom: 6px; cursor: pointer; background: #fff; }
+        .map-card:hover { background: var(--bg2); }
+        .map-thumb { width: 50px; height: 40px; object-fit: cover; border-radius: 4px; }
+        .map-info { flex: 1; font-size: 10px; }
+        .map-title { font-weight: bold; }
+        .map-actions button { background: none; border: none; cursor: pointer; margin-left: 4px; }
+        #stage { flex: 1; position: relative; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        canvas { position: absolute; display: block; }
+        #bg-c { z-index: 1; } #dr-c { z-index: 2; cursor: crosshair; } #ruler-canvas { z-index: 3; pointer-events: none; }
+        #empty { position: absolute; z-index: 0; text-align: center; color: var(--text3); background: rgba(255,255,245,0.8); padding: 20px; border-radius: 12px; }
+        #hint { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 4px 14px; font-size: 10px; white-space: nowrap; z-index: 30; opacity: 0; transition: 0.2s; }
+        #hint.show { opacity: 1; }
+        #calc-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; }
+        .calc-panel { background: #fff; border-radius: 12px; width: 380px; padding: 16px; font-family: monospace; }
+        .calc-display { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 20px; text-align: right; margin-bottom: 12px; min-height: 60px; }
+        .calc-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .calc-buttons button { background: #fff; border: 1px solid var(--border); border-radius: 5px; padding: 8px 4px; font-family: monospace; font-size: 12px; cursor: pointer; }
+        .calc-buttons button.operator { background: #f0f0ec; color: var(--green); }
+        .calc-buttons button.equals { background: var(--green); color: white; }
+        .calc-buttons button.clear { background: #ffe6e6; color: #c00; }
+    </style>
 </head>
 <body>
 <div id="top">
-  <span id="logo">SKYCHART · ASTRONOMY TASKS</span>
-  <div class="sep"></div>
-  <label class="btn" for="img-file">Load single image</label>
-  <input type="file" id="img-file" accept="image/*" style="display:none">
-  <button class="btn" id="save-map-btn">Save map</button>
-  <button class="btn" id="export-png-btn">Export PNG</button>
-  <button class="btn" id="load-folder-btn">📁 Load folder with images (all .png)</button>
-  <div class="sep"></div>
-  <div id="tools">
-    <button class="tool on" id="t-pen" title="Pen">✏</button>
-    <button class="tool" id="t-line" title="Line">╱</button>
-    <button class="tool" id="t-rect" title="Rectangle">□</button>
-    <button class="tool" id="t-circle" title="Circle">○</button>
-    <button class="tool" id="t-text" title="Text">A</button>
-    <button class="tool" id="t-erase" title="Eraser">◻</button>
-    <button class="tool" id="t-ruler" title="Ruler (pixels)">📏</button>
-    <button class="tool" id="t-calc" title="Calculator">🧮</button>
-  </div>
-  <input type="color" id="color-picker" value="#d44000">
-  <input type="range" id="size-slider" min="1" max="20" value="2">
-  <span id="size-val">2</span>
-  <button class="btn" id="undo-btn">Undo</button>
-  <button class="btn" id="clear-drawing">Clear drawing</button>
-  <div id="sp"></div>
+    <span id="logo">SKYCHART · ASTRONOMY TASKS</span>
+    <div class="sep"></div>
+    <label class="btn" for="img-file">Load single image</label>
+    <input type="file" id="img-file" accept="image/*" style="display:none">
+    <button class="btn" id="save-map-btn">Save map</button>
+    <button class="btn" id="export-png-btn">Export PNG</button>
+    <button class="btn" id="load-folder-btn">📁 Load folder with images (all .png)</button>
+    <div class="sep"></div>
+    <div id="tools">
+        <button class="tool on" id="t-pen" title="Pen">✏</button>
+        <button class="tool" id="t-line" title="Line">╱</button>
+        <button class="tool" id="t-rect" title="Rectangle">□</button>
+        <button class="tool" id="t-circle" title="Circle">○</button>
+        <button class="tool" id="t-text" title="Text">A</button>
+        <button class="tool" id="t-erase" title="Eraser">◻</button>
+        <button class="tool" id="t-ruler" title="Ruler (pixels)">📏</button>
+        <button class="tool" id="t-calc" title="Calculator">🧮</button>
+    </div>
+    <input type="color" id="color-picker" value="#d44000">
+    <input type="range" id="size-slider" min="1" max="20" value="2">
+    <span id="size-val">2</span>
+    <button class="btn" id="undo-btn">Undo</button>
+    <button class="btn" id="clear-drawing">Clear drawing</button>
+    <div id="sp"></div>
 </div>
 <div id="main">
-  <div id="sidebar">
-    <div style="display:flex; border-bottom:1px solid var(--border);">
-      <button id="tab-tasks" class="btn" style="flex:1;border-radius:0;">Tasks</button>
-      <button id="tab-saved" class="btn" style="flex:1;border-radius:0;">Saved maps</button>
-    </div>
-    <div id="tasks-panel" style="display:flex; flex-direction:column; height:100%;">
-      <div id="task-header">
-        <input type="text" id="task-search" placeholder="Search constellation / Messier...">
-        <div class="category-filter">
-          <button class="cat-btn active" data-cat="all">All</button>
-          <button class="cat-btn" data-cat="CONSTELLATIONS">Constellations</button>
-          <button class="cat-btn" data-cat="MESSIER">Messier</button>
-          <button class="cat-btn" data-cat="SPECIAL">Special</button>
+    <div id="sidebar">
+        <div style="display:flex; border-bottom:1px solid var(--border);">
+            <button id="tab-tasks" class="btn" style="flex:1;border-radius:0;">Tasks</button>
+            <button id="tab-saved" class="btn" style="flex:1;border-radius:0;">Saved maps</button>
         </div>
-      </div>
-      <div id="task-list"></div>
+        <div id="tasks-panel" style="display:flex; flex-direction:column; height:100%;">
+            <div id="task-header">
+                <input type="text" id="task-search" placeholder="Search constellation / Messier...">
+                <div class="category-filter">
+                    <button class="cat-btn active" data-cat="all">All</button>
+                    <button class="cat-btn" data-cat="CONSTELLATIONS">Constellations</button>
+                    <button class="cat-btn" data-cat="MESSIER">Messier</button>
+                    <button class="cat-btn" data-cat="SPECIAL">Special</button>
+                </div>
+            </div>
+            <div id="task-list"></div>
+        </div>
+        <div id="saved-maps-pane">
+            <div id="saved-list"></div>
+        </div>
     </div>
-    <div id="saved-maps-pane">
-      <div id="saved-list"></div>
+    <div id="stage">
+        <div id="empty">
+            <div>Load a star chart image (drag & drop, single image, or load entire folder)</div>
+            <div>Use tools, check constellations / Messier objects, draw</div>
+            <div>Click "Load folder with images" and select any folder containing .png files</div>
+        </div>
+        <canvas id="bg-c"></canvas>
+        <canvas id="dr-c"></canvas>
+        <canvas id="ruler-canvas"></canvas>
+        <div id="hint"></div>
     </div>
-  </div>
-  <div id="stage">
-    <div id="empty">
-      <div>Load a star chart image (drag & drop, single image, or load entire folder)</div>
-      <div>Use tools, check constellations / Messier objects, draw</div>
-      <div>Click "Load folder with images" and select any folder containing .png files</div>
-    </div>
-    <canvas id="bg-c"></canvas>
-    <canvas id="dr-c"></canvas>
-    <canvas id="ruler-canvas"></canvas>
-    <div id="hint"></div>
-  </div>
 </div>
 
-<!-- calculator modal -->
 <div id="calc-modal">
-  <div class="calc-panel">
-    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-      <b>Scientific Calculator</b>
-      <button id="calc-close" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+    <div class="calc-panel">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <b>Scientific Calculator</b>
+            <button id="calc-close" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+        </div>
+        <div class="calc-display" id="calc-display">0</div>
+        <div class="calc-buttons" id="calc-buttons"></div>
     </div>
-    <div class="calc-display" id="calc-display">0</div>
-    <div class="calc-buttons" id="calc-buttons"></div>
-  </div>
 </div>
 
 <script>
-  // --------------------------------------------------------------
-  // DATA: CONSTELLATIONS + MESSIER + SPECIAL TASKS
-  // --------------------------------------------------------------
-  const CONSTELLATIONS = [
-    "Andromeda", "Antlia", "Apus", "Aquarius", "Aquila", "Ara", "Aries", "Auriga", "Boötes", "Caelum",
-    "Camelopardalis", "Cancer", "Canes Venatici", "Canis Major", "Canis Minor", "Capricornus", "Carina", "Cassiopeia", "Centaurus", "Cepheus",
-    "Cetus", "Chamaeleon", "Circinus", "Columba", "Coma Berenices", "Corona Australis", "Corona Borealis", "Corvus", "Crater", "Crux",
-    "Cygnus", "Delphinus", "Dorado", "Draco", "Equuleus", "Eridanus", "Fornax", "Gemini", "Grus", "Hercules",
-    "Horologium", "Hydra", "Hydrus", "Indus", "Lacerta", "Leo", "Leo Minor", "Lepus", "Libra", "Lupus",
-    "Lynx", "Lyra", "Mensa", "Microscopium", "Monoceros", "Musca", "Norma", "Octans", "Ophiuchus", "Orion",
-    "Pavo", "Pegasus", "Perseus", "Phoenix", "Pictor", "Pisces", "Piscis Austrinus", "Puppis", "Pyxis", "Reticulum",
-    "Sagitta", "Sagittarius", "Scorpius", "Sculptor", "Scutum", "Serpens", "Sextans", "Taurus", "Telescopium", "Triangulum",
-    "Triangulum Australe", "Tucana", "Ursa Major", "Ursa Minor", "Vela", "Virgo", "Volans", "Vulpecula"
-  ];
-
-  const MESSIER = [];
-  for (let i=1; i<=110; i++) {
-    let name = `M${i}`;
-    if (i===1) name+=" (Crab)";
-    if (i===8) name+=" (Lagoon)";
-    if (i===13) name+=" (Hercules)";
-    if (i===31) name+=" (Andromeda)";
-    if (i===42) name+=" (Orion)";
-    if (i===45) name+=" (Pleiades)";
-    MESSIER.push(name);
-  }
-
-  const SPECIAL_TASKS = [
-    { id: "lst", text: "Estimate LST (Local Sidereal Time)" },
-    { id: "season", text: "Determine season (at midnight)" },
-    { id: "equator", text: "Draw CELESTIAL EQUATOR" },
-    { id: "ecliptic", text: "Draw ECLIPTIC" },
-    { id: "galactic", text: "Draw GALACTIC PLANE" }
-  ];
-
-  // --------------------------------------------------------------
-  // STATE
-  // --------------------------------------------------------------
-  let bgCanvas = document.getElementById('bg-c'), drCanvas = document.getElementById('dr-c');
-  let bgCtx = bgCanvas.getContext('2d'), drCtx = drCanvas.getContext('2d');
-  let rulerCanvas = document.getElementById('ruler-canvas'), rulerCtx = rulerCanvas.getContext('2d');
-  let stageDiv = document.getElementById('stage');
-
-  let currentTool = 'pen', drawColor = '#d44000', lineWidth = 2;
-  let drawing = false, lastX = 0, lastY = 0, lineStart = null, snapImage = null;
-  let undoStack = [];
-
-  let rulerPoints = [];
-
-  let tasks = [];
-  let filterText = '';
-  let activeCategory = 'all';
-
-  let savedMaps = [];
-
-  // --------------------------------------------------------------
-  // TASKS + AUTO-SAVE PROGRESS
-  // --------------------------------------------------------------
-  function buildTasks() {
-    tasks = [];
-    CONSTELLATIONS.forEach(c => {
-      tasks.push({ id: `const_${c}`, text: `Constellation ${c}`, category: "CONSTELLATIONS", done: false });
-    });
-    MESSIER.forEach(m => {
-      tasks.push({ id: `messier_${m}`, text: `${m}`, category: "MESSIER", done: false });
-    });
-    SPECIAL_TASKS.forEach(sp => {
-      tasks.push({ id: sp.id, text: sp.text, category: "SPECIAL", done: false });
-    });
-    let savedProgress = localStorage.getItem('skychart_task_progress');
-    if (savedProgress) {
-      try {
-        let prog = JSON.parse(savedProgress);
-        tasks.forEach(t => { if (prog[t.id] !== undefined) t.done = prog[t.id]; });
-      } catch(e) {}
-    }
-  }
-
-  function saveTaskProgressLocally() {
-    let progress = {};
-    tasks.forEach(t => { progress[t.id] = t.done; });
-    localStorage.setItem('skychart_task_progress', JSON.stringify(progress));
-  }
-
-  function renderTaskList() {
-    const container = document.getElementById('task-list');
-    if (!container) return;
-    let filtered = tasks.filter(t => {
-      let matchText = t.text.toLowerCase().includes(filterText.toLowerCase());
-      let matchCat = (activeCategory === 'all') || (t.category === activeCategory);
-      return matchText && matchCat;
-    });
-    let groups = {};
-    filtered.forEach(t => { if (!groups[t.category]) groups[t.category] = []; groups[t.category].push(t); });
-    container.innerHTML = '';
-    for (let cat in groups) {
-      let catDiv = document.createElement('div');
-      catDiv.className = 'task-cat';
-      catDiv.innerText = cat;
-      container.appendChild(catDiv);
-      groups[cat].forEach(task => {
-        let row = document.createElement('div');
-        row.className = `task-item ${task.done ? 'done' : ''}`;
-        let cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.checked = task.done;
-        cb.onchange = (e) => {
-          task.done = e.target.checked;
-          saveTaskProgressLocally();
-          renderTaskList();
-          hint(task.done ? `Checked: ${task.text}` : `Unchecked: ${task.text}`);
-        };
-        let label = document.createElement('span');
-        label.className = 'task-label';
-        label.innerText = task.text;
-        row.appendChild(cb);
-        row.appendChild(label);
-        container.appendChild(row);
-      });
-    }
-  }
-
-  document.getElementById('task-search').oninput = e => { filterText = e.target.value; renderTaskList(); };
-  document.querySelectorAll('.cat-btn').forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeCategory = btn.dataset.cat;
-      renderTaskList();
-    };
-  });
-
-  // --------------------------------------------------------------
-  // DRAWING + UNDO (Ctrl+Z)
-  // --------------------------------------------------------------
-  function saveToUndo() {
-    if (!drCanvas.width) return;
-    undoStack.push(drCtx.getImageData(0,0,drCanvas.width,drCanvas.height));
-    if (undoStack.length > 40) undoStack.shift();
-  }
-  function restoreUndo() {
-    if (undoStack.length <= 1) return;
-    undoStack.pop();
-    let imgData = undoStack[undoStack.length-1];
-    drCtx.putImageData(imgData, 0, 0);
-  }
-  function clearDrawing() {
-    if (!drCanvas.width) return;
-    saveToUndo();
-    drCtx.clearRect(0,0,drCanvas.width,drCanvas.height);
-  }
-
-  function getCanvasCoords(e) {
-    let rect = drCanvas.getBoundingClientRect();
-    let clientX = e.clientX ?? (e.touches ? e.touches[0].clientX : 0);
-    let clientY = e.clientY ?? (e.touches ? e.touches[0].clientY : 0);
-    let x = (clientX - rect.left) * (drCanvas.width / rect.width);
-    let y = (clientY - rect.top) * (drCanvas.height / rect.height);
-    x = Math.min(Math.max(0, x), drCanvas.width);
-    y = Math.min(Math.max(0, y), drCanvas.height);
-    return {x,y};
-  }
-
-  function startDraw(e) {
-    if (!bgCanvas.width) { hint("Load an image first"); return; }
-    let p = getCanvasCoords(e);
-    if (currentTool === 'ruler') {
-      if (rulerPoints.length === 0) {
-        rulerPoints = [p];
-        rulerCtx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);
-        rulerCtx.fillStyle = drawColor;
-        rulerCtx.beginPath();
-        rulerCtx.arc(p.x, p.y, 4, 0, 2*Math.PI);
-        rulerCtx.fill();
-        hint("First point. Click second point.");
-      } else {
-        let p1 = rulerPoints[0], p2 = p;
-        let distPx = Math.hypot(p2.x-p1.x, p2.y-p1.y).toFixed(1);
-        saveToUndo();
-        drCtx.beginPath();
-        drCtx.moveTo(p1.x, p1.y);
-        drCtx.lineTo(p2.x, p2.y);
-        drCtx.strokeStyle = drawColor;
-        drCtx.lineWidth = lineWidth;
-        drCtx.stroke();
-        drCtx.font = `${Math.max(10, lineWidth+6)}px monospace`;
-        drCtx.fillStyle = drawColor;
-        let midX = (p1.x+p2.x)/2, midY = (p1.y+p2.y)/2;
-        drCtx.fillText(`${distPx} px`, midX+5, midY-5);
-        hint(`Distance: ${distPx} pixels`);
-        rulerPoints = [];
-        rulerCtx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);
-      }
-      return;
-    }
-    if (currentTool === 'text') {
-      let txt = prompt("Enter text:");
-      if (txt) {
-        saveToUndo();
-        drCtx.font = `${Math.max(11, lineWidth*6)}px monospace`;
-        drCtx.fillStyle = drawColor;
-        drCtx.fillText(txt, p.x, p.y);
-      }
-      return;
-    }
-    drawing = true;
-    lastX = p.x; lastY = p.y;
-    if (currentTool === 'line' || currentTool === 'circle' || currentTool === 'rect') {
-      lineStart = {x:p.x, y:p.y};
-      snapImage = drCtx.getImageData(0,0,drCanvas.width,drCanvas.height);
-    }
-    if (currentTool === 'pen' || currentTool === 'erase') {
-      saveToUndo();
-      drCtx.beginPath();
-      drCtx.moveTo(p.x, p.y);
-    }
-  }
-
-  function drawMove(e) {
-    if (!drawing) return;
-    let p = getCanvasCoords(e);
-    if (currentTool === 'pen') {
-      drCtx.globalCompositeOperation = 'source-over';
-      drCtx.strokeStyle = drawColor;
-      drCtx.lineWidth = lineWidth;
-      drCtx.lineTo(p.x, p.y);
-      drCtx.stroke();
-      drCtx.beginPath();
-      drCtx.moveTo(p.x, p.y);
-    } else if (currentTool === 'erase') {
-      drCtx.globalCompositeOperation = 'destination-out';
-      drCtx.lineWidth = lineWidth * 5;
-      drCtx.lineTo(p.x, p.y);
-      drCtx.stroke();
-      drCtx.beginPath();
-      drCtx.moveTo(p.x, p.y);
-      drCtx.globalCompositeOperation = 'source-over';
-    } else if (currentTool === 'line' && snapImage) {
-      drCtx.putImageData(snapImage, 0, 0);
-      drCtx.beginPath();
-      drCtx.moveTo(lineStart.x, lineStart.y);
-      drCtx.lineTo(p.x, p.y);
-      drCtx.strokeStyle = drawColor;
-      drCtx.lineWidth = lineWidth;
-      drCtx.stroke();
-    } else if (currentTool === 'circle' && snapImage) {
-      drCtx.putImageData(snapImage, 0, 0);
-      let rx = Math.abs(p.x - lineStart.x)/2;
-      let ry = Math.abs(p.y - lineStart.y)/2;
-      let cx = lineStart.x + (p.x - lineStart.x)/2;
-      let cy = lineStart.y + (p.y - lineStart.y)/2;
-      drCtx.beginPath();
-      drCtx.ellipse(cx, cy, Math.max(1,rx), Math.max(1,ry), 0, 0, 2*Math.PI);
-      drCtx.strokeStyle = drawColor;
-      drCtx.lineWidth = lineWidth;
-      drCtx.stroke();
-    } else if (currentTool === 'rect' && snapImage) {
-      drCtx.putImageData(snapImage, 0, 0);
-      let w = p.x - lineStart.x;
-      let h = p.y - lineStart.y;
-      drCtx.beginPath();
-      drCtx.rect(lineStart.x, lineStart.y, w, h);
-      drCtx.strokeStyle = drawColor;
-      drCtx.lineWidth = lineWidth;
-      drCtx.stroke();
-    }
-    lastX = p.x; lastY = p.y;
-  }
-
-  function endDraw() {
-    if (!drawing) return;
-    drawing = false;
-    if (currentTool === 'line' || currentTool === 'circle' || currentTool === 'rect') saveToUndo();
-    lineStart = null;
-    snapImage = null;
-    drCtx.globalCompositeOperation = 'source-over';
-  }
-
-  drCanvas.addEventListener('mousedown', startDraw);
-  drCanvas.addEventListener('mousemove', drawMove);
-  drCanvas.addEventListener('mouseup', endDraw);
-  drCanvas.addEventListener('mouseleave', endDraw);
-  drCanvas.addEventListener('touchstart', e=>{e.preventDefault(); startDraw(e.touches[0]);});
-  drCanvas.addEventListener('touchmove', e=>{e.preventDefault(); drawMove(e.touches[0]);});
-  drCanvas.addEventListener('touchend', endDraw);
-
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-      e.preventDefault();
-      restoreUndo();
-      hint("Undo");
-    }
-  });
-
-  // --------------------------------------------------------------
-  // Load single image file
-  // --------------------------------------------------------------
-  function loadImageFromURL(url, callback) {
-    let img = new Image();
-    img.crossOrigin = "Anonymous";
-    img.onload = () => {
-      let sw = stageDiv.clientWidth, sh = stageDiv.clientHeight;
-      let scale = Math.min(sw/img.width, sh/img.height, 1);
-      let w = Math.round(img.width*scale), h = Math.round(img.height*scale);
-      let ox = (sw-w)/2, oy = (sh-h)/2;
-      [bgCanvas, drCanvas, rulerCanvas].forEach(c => {
-        c.width = w; c.height = h;
-        c.style.left = ox+'px'; c.style.top = oy+'px';
-        c.style.position = 'absolute';
-      });
-      bgCtx.drawImage(img, 0, 0, w, h);
-      drCtx.clearRect(0,0,w,h);
-      rulerCtx.clearRect(0,0,w,h);
-      undoStack = [];
-      saveToUndo();
-      document.getElementById('empty').style.display = 'none';
-      if (callback) callback(w,h);
-      hint("Image loaded.");
-    };
-    img.onerror = () => { if (callback) callback(null); };
-    img.src = url;
-  }
-
-  function loadImageFile(file) {
-    let url = URL.createObjectURL(file);
-    loadImageFromURL(url, () => URL.revokeObjectURL(url));
-  }
-
-  document.getElementById('img-file').onchange = e => { if(e.target.files[0]) loadImageFile(e.target.files[0]); };
-  stageDiv.addEventListener('dragover', e=>e.preventDefault());
-  stageDiv.addEventListener('drop', e=>{
-    e.preventDefault();
-    let f = [...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));
-    if(f) loadImageFile(f);
-  });
-
-  // --------------------------------------------------------------
-  // Save / Load maps (including task progress)
-  // --------------------------------------------------------------
-  function getCurrentFullImage() {
-    if (!bgCanvas.width) return null;
-    let full = document.createElement('canvas');
-    full.width = bgCanvas.width; full.height = bgCanvas.height;
-    let ctx = full.getContext('2d');
-    ctx.drawImage(bgCanvas, 0, 0);
-    ctx.drawImage(drCanvas, 0, 0);
-    return full.toDataURL('image/jpeg', 0.85);
-  }
-
-  function saveMap() {
-    let fullData = getCurrentFullImage();
-    if (!fullData) { hint("Load an image first"); return; }
-    let name = prompt("Name for this map:", "map_" + new Date().toLocaleTimeString());
-    if (!name) return;
-    let taskSnapshot = tasks.map(t => ({ id: t.id, done: t.done }));
-    let thumbCanvas = document.createElement('canvas');
-    let tw = 100, th = (bgCanvas.height/bgCanvas.width)*100;
-    thumbCanvas.width = tw; thumbCanvas.height = th;
-    let tctx = thumbCanvas.getContext('2d');
-    let tempImg = new Image();
-    tempImg.onload = () => {
-      tctx.drawImage(tempImg, 0, 0, tw, th);
-      let thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
-      let entry = { id: Date.now(), name, fullData, thumb, date: new Date().toISOString(), taskSnapshot };
-      savedMaps.unshift(entry);
-      if (savedMaps.length > 20) savedMaps.pop();
-      localStorage.setItem('skychart_full_maps', JSON.stringify(savedMaps));
-      renderSavedMaps();
-      hint("Map saved (drawing + task progress)");
-    };
-    tempImg.src = fullData;
-  }
-
-  function loadSavedMap(entry) {
-    let img = new Image();
-    img.onload = () => {
-      let sw = stageDiv.clientWidth, sh = stageDiv.clientHeight;
-      let scale = Math.min(sw/img.width, sh/img.height, 1);
-      let w = Math.round(img.width*scale), h = Math.round(img.height*scale);
-      let ox = (sw-w)/2, oy = (sh-h)/2;
-      [bgCanvas, drCanvas, rulerCanvas].forEach(c => {
-        c.width = w; c.height = h;
-        c.style.left = ox+'px'; c.style.top = oy+'px';
-      });
-      bgCtx.drawImage(img, 0, 0, w, h);
-      drCtx.clearRect(0,0,w,h);
-      undoStack = [];
-      saveToUndo();
-      document.getElementById('empty').style.display = 'none';
-      if (entry.taskSnapshot) {
-        tasks.forEach(t => {
-          let found = entry.taskSnapshot.find(ts => ts.id === t.id);
-          if (found) t.done = found.done;
-        });
-        saveTaskProgressLocally();
-        renderTaskList();
-      }
-      hint("Map loaded with tasks state");
-    };
-    img.src = entry.fullData;
-  }
-
-  function deleteMap(id) {
-    savedMaps = savedMaps.filter(m => m.id !== id);
-    localStorage.setItem('skychart_full_maps', JSON.stringify(savedMaps));
-    renderSavedMaps();
-  }
-
-  function renderSavedMaps() {
-    let container = document.getElementById('saved-list');
-    if (!container) return;
-    container.innerHTML = '';
-    savedMaps.forEach(m => {
-      let div = document.createElement('div');
-      div.className = 'map-card';
-      div.innerHTML = `
-      <img class="map-thumb" src="${m.thumb}">
-      <div class="map-info">
-        <div class="map-title">${m.name}</div>
-        <div>${new Date(m.date).toLocaleString()}</div>
-      </div>
-      <div class="map-actions">
-        <button class="btn" data-load="${m.id}">load</button>
-        <button class="btn" data-del="${m.id}">delete</button>
-      </div>
-    `;
-      div.querySelector('[data-load]')?.addEventListener('click', (e) => { e.stopPropagation(); loadSavedMap(m); });
-      div.querySelector('[data-del]')?.addEventListener('click', (e) => { e.stopPropagation(); deleteMap(m.id); });
-      container.appendChild(div);
-    });
-  }
-
-  // --------------------------------------------------------------
-  // Load ALL .png images from a folder using directory picker
-  // --------------------------------------------------------------
-  function loadAllImagesFromFolder() {
-    let input = document.createElement('input');
-    input.type = 'file';
-    input.webkitdirectory = true;
-    input.multiple = true;
-    input.onchange = async (e) => {
-      let files = Array.from(e.target.files);
-      let pngFiles = files.filter(f => f.name.toLowerCase().endsWith('.png'));
-      if (pngFiles.length === 0) {
-        hint("No .png files found in selected folder.");
-        return;
-      }
-      let addedCount = 0;
-      for (let file of pngFiles) {
-        let name = file.name.replace(/\.png$/i, '');
-        // check if already exists (by name)
-        if (savedMaps.some(m => m.name === name)) continue;
-        let url = URL.createObjectURL(file);
-        await new Promise((resolve) => {
-          let img = new Image();
-          img.onload = () => {
-            let canvas = document.createElement('canvas');
-            canvas.width = img.width; canvas.height = img.height;
-            let ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            let fullData = canvas.toDataURL('image/jpeg', 0.85);
-            let thumbCanvas = document.createElement('canvas');
-            let tw = 100, th = (img.height/img.width)*100;
-            thumbCanvas.width = tw; thumbCanvas.height = th;
-            let tctx = thumbCanvas.getContext('2d');
-            tctx.drawImage(img, 0, 0, tw, th);
-            let thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
-            let newMap = {
-              id: Date.now() + addedCount + Math.random() * 10000,
-              name: name,
-              fullData: fullData,
-              thumb: thumb,
-              date: new Date().toISOString(),
-              taskSnapshot: tasks.map(t => ({ id: t.id, done: false }))
-            };
-            savedMaps.push(newMap);
-            addedCount++;
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-          img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
-          img.src = url;
-        });
-      }
-      if (addedCount > 0) {
-        localStorage.setItem('skychart_full_maps', JSON.stringify(savedMaps));
-        renderSavedMaps();
-        hint(`Added ${addedCount} map(s) from folder.`);
-      } else {
-        hint("No new .png images found or all already added.");
-      }
-    };
-    input.click();
-  }
-
-  document.getElementById('load-folder-btn').onclick = loadAllImagesFromFolder;
-
-  // --------------------------------------------------------------
-  // No demo maps — start with empty savedMaps array
-  // --------------------------------------------------------------
-  async function loadStoredMaps() {
-    let stored = localStorage.getItem('skychart_full_maps');
-    if (stored && stored !== '[]') {
-      savedMaps = JSON.parse(stored);
-    } else {
-      savedMaps = [];   // start empty, no demo maps
-      localStorage.setItem('skychart_full_maps', JSON.stringify(savedMaps));
-    }
-    renderSavedMaps();
-  }
-
-  // --------------------------------------------------------------
-  // Scientific Calculator
-  // --------------------------------------------------------------
-  function buildCalculator() {
-    const container = document.getElementById('calc-buttons');
-    const buttons = [
-      '7','8','9','/','C',
-      '4','5','6','*','(',
-      '1','2','3','-',')',
-      '0','.','=','+','^',
-      'sin','cos','tan','asin','acos',
-      'atan','log','ln','sqrt','π',
-      'e','x²','1/x','!','clr'
+    // ================================================================
+    //  FIXED ARRAY WITH ALL DEFAULT IMAGES (edit as needed)
+    //  These images will be automatically added to Saved Maps on startup
+    //  and will always be present.
+    // ================================================================
+    const DEFAULT_IMAGES = [
+        'lat90long0.png',
+        'lat-90long0.png'
+        // add more filenames here, e.g.:
+        // 'wholeskychart.png',
+        // 'lat45long90.png'
     ];
-    container.innerHTML = '';
-    let calcExpr = '';
-    let display = document.getElementById('calc-display');
-    const updateDisplay = () => { display.innerText = calcExpr || '0'; };
-    const evaluate = () => {
-      try {
-        let expr = calcExpr.replace(/π/g, 'Math.PI').replace(/e/g, 'Math.E');
-        expr = expr.replace(/\^/g, '**');
-        expr = expr.replace(/sin\(/g, 'Math.sin(');
-        expr = expr.replace(/cos\(/g, 'Math.cos(');
-        expr = expr.replace(/tan\(/g, 'Math.tan(');
-        expr = expr.replace(/asin\(/g, 'Math.asin(');
-        expr = expr.replace(/acos\(/g, 'Math.acos(');
-        expr = expr.replace(/atan\(/g, 'Math.atan(');
-        expr = expr.replace(/log\(/g, 'Math.log10(');
-        expr = expr.replace(/ln\(/g, 'Math.log(');
-        expr = expr.replace(/sqrt\(/g, 'Math.sqrt(');
-        expr = expr.replace(/x²/g, '**2');
-        expr = expr.replace(/1\/x/g, '1/');
-        expr = expr.replace(/!\(?(\d+)\)?/, (_,n) => factorial(parseInt(n)));
-        const result = Function('"use strict";return (' + expr + ')')();
-        calcExpr = result.toString();
-        updateDisplay();
-      } catch(e) { display.innerText = 'Error'; calcExpr = ''; }
-    };
-    const factorial = (n) => { if (n<0) return NaN; if(n<=1) return 1; let r=1; for(let i=2;i<=n;i++) r*=i; return r; };
-    buttons.forEach(btn => {
-      let b = document.createElement('button');
-      b.textContent = btn;
-      b.onclick = () => {
-        if (btn === 'C' || btn === 'clr') { calcExpr = ''; updateDisplay(); return; }
-        if (btn === '=') { evaluate(); return; }
-        if (btn === 'π') calcExpr += 'π';
-        else if (btn === 'e') calcExpr += 'e';
-        else if (btn === 'x²') calcExpr += '^2';
-        else if (btn === '1/x') calcExpr += '1/';
-        else if (btn === '!') calcExpr += '!';
-        else calcExpr += btn;
-        updateDisplay();
-      };
-      if (['/','*','-','+','^','sin','cos','tan','asin','acos','atan','log','ln','sqrt','x²','1/x','!','π','e'].includes(btn))
-        b.classList.add('operator');
-      if (btn === '=') b.classList.add('equals');
-      if (btn === 'C' || btn === 'clr') b.classList.add('clear');
-      container.appendChild(b);
+    const SKYCHARTS_FOLDER = './skycharts/';
+    // ================================================================
+
+    // --------------------------------------------------------------
+    // DATA
+    // --------------------------------------------------------------
+    const CONSTELLATIONS = [
+        "Andromeda","Antlia","Apus","Aquarius","Aquila","Ara","Aries","Auriga","Boötes","Caelum",
+        "Camelopardalis","Cancer","Canes Venatici","Canis Major","Canis Minor","Capricornus","Carina","Cassiopeia","Centaurus","Cepheus",
+        "Cetus","Chamaeleon","Circinus","Columba","Coma Berenices","Corona Australis","Corona Borealis","Corvus","Crater","Crux",
+        "Cygnus","Delphinus","Dorado","Draco","Equuleus","Eridanus","Fornax","Gemini","Grus","Hercules",
+        "Horologium","Hydra","Hydrus","Indus","Lacerta","Leo","Leo Minor","Lepus","Libra","Lupus",
+        "Lynx","Lyra","Mensa","Microscopium","Monoceros","Musca","Norma","Octans","Ophiuchus","Orion",
+        "Pavo","Pegasus","Perseus","Phoenix","Pictor","Pisces","Piscis Austrinus","Puppis","Pyxis","Reticulum",
+        "Sagitta","Sagittarius","Scorpius","Sculptor","Scutum","Serpens","Sextans","Taurus","Telescopium","Triangulum",
+        "Triangulum Australe","Tucana","Ursa Major","Ursa Minor","Vela","Virgo","Volans","Vulpecula"
+    ];
+    const MESSIER = [];
+    for (let i=1;i<=110;i++){
+        let name=`M${i}`;
+        if(i===1)name+=" (Crab)";if(i===8)name+=" (Lagoon)";if(i===13)name+=" (Hercules)";
+        if(i===31)name+=" (Andromeda)";if(i===42)name+=" (Orion)";if(i===45)name+=" (Pleiades)";
+        MESSIER.push(name);
+    }
+    const SPECIAL_TASKS=[
+        {id:"lst",text:"Estimate LST (Local Sidereal Time)"},
+        {id:"season",text:"Determine season (at midnight)"},
+        {id:"equator",text:"Draw CELESTIAL EQUATOR"},
+        {id:"ecliptic",text:"Draw ECLIPTIC"},
+        {id:"galactic",text:"Draw GALACTIC PLANE"}
+    ];
+
+    // --------------------------------------------------------------
+    // STATE
+    // --------------------------------------------------------------
+    let bgCanvas=document.getElementById('bg-c'),drCanvas=document.getElementById('dr-c');
+    let bgCtx=bgCanvas.getContext('2d'),drCtx=drCanvas.getContext('2d');
+    let rulerCanvas=document.getElementById('ruler-canvas'),rulerCtx=rulerCanvas.getContext('2d');
+    let stageDiv=document.getElementById('stage');
+    let currentTool='pen',drawColor='#d44000',lineWidth=2;
+    let drawing=false,lastX=0,lastY=0,lineStart=null,snapImage=null;
+    let undoStack=[],rulerPoints=[],tasks=[],filterText='',activeCategory='all',savedMaps=[];
+
+    // --------------------------------------------------------------
+    // TASKS
+    // --------------------------------------------------------------
+    function buildTasks(){
+        tasks=[];
+        CONSTELLATIONS.forEach(c=>tasks.push({id:`const_${c}`,text:`Constellation ${c}`,category:"CONSTELLATIONS",done:false}));
+        MESSIER.forEach(m=>tasks.push({id:`messier_${m}`,text:`${m}`,category:"MESSIER",done:false}));
+        SPECIAL_TASKS.forEach(sp=>tasks.push({id:sp.id,text:sp.text,category:"SPECIAL",done:false}));
+        let saved=localStorage.getItem('skychart_task_progress');
+        if(saved){try{let p=JSON.parse(saved);tasks.forEach(t=>{if(p[t.id]!==undefined)t.done=p[t.id];});}catch(e){}}
+    }
+    function saveTaskProgressLocally(){let p={};tasks.forEach(t=>{p[t.id]=t.done;});localStorage.setItem('skychart_task_progress',JSON.stringify(p));}
+    function renderTaskList(){
+        const container=document.getElementById('task-list');if(!container)return;
+        let filtered=tasks.filter(t=>t.text.toLowerCase().includes(filterText.toLowerCase())&&(activeCategory==='all'||t.category===activeCategory));
+        let groups={};filtered.forEach(t=>{if(!groups[t.category])groups[t.category]=[];groups[t.category].push(t);});
+        container.innerHTML='';
+        for(let cat in groups){
+            let catDiv=document.createElement('div');catDiv.className='task-cat';catDiv.innerText=cat;container.appendChild(catDiv);
+            groups[cat].forEach(task=>{
+                let row=document.createElement('div');row.className=`task-item ${task.done?'done':''}`;
+                let cb=document.createElement('input');cb.type='checkbox';cb.checked=task.done;
+                cb.onchange=(e)=>{task.done=e.target.checked;saveTaskProgressLocally();renderTaskList();hint(task.done?`Checked: ${task.text}`:`Unchecked: ${task.text}`);};
+                let label=document.createElement('span');label.className='task-label';label.innerText=task.text;
+                row.appendChild(cb);row.appendChild(label);container.appendChild(row);
+            });
+        }
+    }
+    document.getElementById('task-search').oninput=e=>{filterText=e.target.value;renderTaskList();};
+    document.querySelectorAll('.cat-btn').forEach(btn=>{
+        btn.onclick=()=>{document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');activeCategory=btn.dataset.cat;renderTaskList();};
     });
-  }
 
-  // --------------------------------------------------------------
-  // UI initialization
-  // --------------------------------------------------------------
-  function setTool(tool) {
-    currentTool = tool;
-    document.querySelectorAll('.tool').forEach(btn => btn.classList.remove('on'));
-    document.getElementById(`t-${tool}`)?.classList.add('on');
-    if (tool !== 'ruler') { rulerPoints = []; rulerCtx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height); }
-    let names = { pen:"Pen", line:"Line", rect:"Rectangle", circle:"Circle", text:"Text", erase:"Eraser", ruler:"Ruler (pixels)" };
-    hint(names[tool] || tool);
-  }
-  document.getElementById('t-pen').onclick = () => setTool('pen');
-  document.getElementById('t-line').onclick = () => setTool('line');
-  document.getElementById('t-rect').onclick = () => setTool('rect');
-  document.getElementById('t-circle').onclick = () => setTool('circle');
-  document.getElementById('t-text').onclick = () => setTool('text');
-  document.getElementById('t-erase').onclick = () => setTool('erase');
-  document.getElementById('t-ruler').onclick = () => setTool('ruler');
-  document.getElementById('t-calc').onclick = () => document.getElementById('calc-modal').style.display = 'flex';
-  document.getElementById('calc-close').onclick = () => document.getElementById('calc-modal').style.display = 'none';
-  document.getElementById('calc-modal').onclick = (e) => { if(e.target === document.getElementById('calc-modal')) document.getElementById('calc-modal').style.display = 'none'; };
-  document.getElementById('color-picker').oninput = e => drawColor = e.target.value;
-  document.getElementById('size-slider').oninput = e => { lineWidth = +e.target.value; document.getElementById('size-val').innerText = lineWidth; };
-  document.getElementById('undo-btn').onclick = () => restoreUndo();
-  document.getElementById('clear-drawing').onclick = () => clearDrawing();
-  document.getElementById('save-map-btn').onclick = () => saveMap();
-  document.getElementById('export-png-btn').onclick = () => {
-    if (!bgCanvas.width) return;
-    let full = document.createElement('canvas');
-    full.width = bgCanvas.width; full.height = bgCanvas.height;
-    let ctx = full.getContext('2d');
-    ctx.drawImage(bgCanvas,0,0); ctx.drawImage(drCanvas,0,0);
-    let a = document.createElement('a');
-    a.download = `skychart_${Date.now()}.png`;
-    a.href = full.toDataURL();
-    a.click();
-  };
-  document.getElementById('tab-tasks').onclick = () => {
-    document.getElementById('tasks-panel').style.display = 'flex';
-    document.getElementById('saved-maps-pane').style.display = 'none';
-  };
-  document.getElementById('tab-saved').onclick = () => {
-    document.getElementById('tasks-panel').style.display = 'none';
-    document.getElementById('saved-maps-pane').style.display = 'flex';
-    renderSavedMaps();
-  };
+    // --------------------------------------------------------------
+    // DRAWING
+    // --------------------------------------------------------------
+    function saveToUndo(){if(!drCanvas.width)return;undoStack.push(drCtx.getImageData(0,0,drCanvas.width,drCanvas.height));if(undoStack.length>40)undoStack.shift();}
+    function restoreUndo(){if(undoStack.length<=1)return;undoStack.pop();drCtx.putImageData(undoStack[undoStack.length-1],0,0);}
+    function clearDrawing(){if(!drCanvas.width)return;saveToUndo();drCtx.clearRect(0,0,drCanvas.width,drCanvas.height);}
+    function getCanvasCoords(e){
+        let rect=drCanvas.getBoundingClientRect();
+        let cx=e.clientX??(e.touches?e.touches[0].clientX:0),cy=e.clientY??(e.touches?e.touches[0].clientY:0);
+        return {x:Math.min(Math.max(0,(cx-rect.left)*(drCanvas.width/rect.width)),drCanvas.width),
+            y:Math.min(Math.max(0,(cy-rect.top)*(drCanvas.height/rect.height)),drCanvas.height)};
+    }
+    function startDraw(e){
+        if(!bgCanvas.width){hint("Load an image first");return;}
+        let p=getCanvasCoords(e);
+        if(currentTool==='ruler'){
+            if(rulerPoints.length===0){rulerPoints=[p];rulerCtx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);rulerCtx.fillStyle=drawColor;rulerCtx.beginPath();rulerCtx.arc(p.x,p.y,4,0,2*Math.PI);rulerCtx.fill();hint("First point. Click second point.");}
+            else{let p1=rulerPoints[0],p2=p,distPx=Math.hypot(p2.x-p1.x,p2.y-p1.y).toFixed(1);saveToUndo();drCtx.beginPath();drCtx.moveTo(p1.x,p1.y);drCtx.lineTo(p2.x,p2.y);drCtx.strokeStyle=drawColor;drCtx.lineWidth=lineWidth;drCtx.stroke();drCtx.font=`${Math.max(10,lineWidth+6)}px monospace`;drCtx.fillStyle=drawColor;drCtx.fillText(`${distPx} px`,(p1.x+p2.x)/2+5,(p1.y+p2.y)/2-5);hint(`Distance: ${distPx} pixels`);rulerPoints=[];rulerCtx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);}
+            return;
+        }
+        if(currentTool==='text'){let txt=prompt("Enter text:");if(txt){saveToUndo();drCtx.font=`${Math.max(11,lineWidth*6)}px monospace`;drCtx.fillStyle=drawColor;drCtx.fillText(txt,p.x,p.y);}return;}
+        drawing=true;lastX=p.x;lastY=p.y;
+        if(['line','circle','rect'].includes(currentTool)){lineStart={x:p.x,y:p.y};snapImage=drCtx.getImageData(0,0,drCanvas.width,drCanvas.height);}
+        if(['pen','erase'].includes(currentTool)){saveToUndo();drCtx.beginPath();drCtx.moveTo(p.x,p.y);}
+    }
+    function drawMove(e){
+        if(!drawing)return;let p=getCanvasCoords(e);
+        if(currentTool==='pen'){drCtx.globalCompositeOperation='source-over';drCtx.strokeStyle=drawColor;drCtx.lineWidth=lineWidth;drCtx.lineTo(p.x,p.y);drCtx.stroke();drCtx.beginPath();drCtx.moveTo(p.x,p.y);}
+        else if(currentTool==='erase'){drCtx.globalCompositeOperation='destination-out';drCtx.lineWidth=lineWidth*5;drCtx.lineTo(p.x,p.y);drCtx.stroke();drCtx.beginPath();drCtx.moveTo(p.x,p.y);drCtx.globalCompositeOperation='source-over';}
+        else if(currentTool==='line'&&snapImage){drCtx.putImageData(snapImage,0,0);drCtx.beginPath();drCtx.moveTo(lineStart.x,lineStart.y);drCtx.lineTo(p.x,p.y);drCtx.strokeStyle=drawColor;drCtx.lineWidth=lineWidth;drCtx.stroke();}
+        else if(currentTool==='circle'&&snapImage){drCtx.putImageData(snapImage,0,0);let rx=Math.abs(p.x-lineStart.x)/2,ry=Math.abs(p.y-lineStart.y)/2,cx=lineStart.x+(p.x-lineStart.x)/2,cy=lineStart.y+(p.y-lineStart.y)/2;drCtx.beginPath();drCtx.ellipse(cx,cy,Math.max(1,rx),Math.max(1,ry),0,0,2*Math.PI);drCtx.strokeStyle=drawColor;drCtx.lineWidth=lineWidth;drCtx.stroke();}
+        else if(currentTool==='rect'&&snapImage){drCtx.putImageData(snapImage,0,0);drCtx.beginPath();drCtx.rect(lineStart.x,lineStart.y,p.x-lineStart.x,p.y-lineStart.y);drCtx.strokeStyle=drawColor;drCtx.lineWidth=lineWidth;drCtx.stroke();}
+        lastX=p.x;lastY=p.y;
+    }
+    function endDraw(){if(!drawing)return;drawing=false;if(['line','circle','rect'].includes(currentTool))saveToUndo();lineStart=null;snapImage=null;drCtx.globalCompositeOperation='source-over';}
+    drCanvas.addEventListener('mousedown',startDraw);drCanvas.addEventListener('mousemove',drawMove);drCanvas.addEventListener('mouseup',endDraw);drCanvas.addEventListener('mouseleave',endDraw);
+    drCanvas.addEventListener('touchstart',e=>{e.preventDefault();startDraw(e.touches[0]);});drCanvas.addEventListener('touchmove',e=>{e.preventDefault();drawMove(e.touches[0]);});drCanvas.addEventListener('touchend',endDraw);
+    document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();restoreUndo();hint("Undo");}});
 
-  function hint(msg) { let h=document.getElementById('hint'); h.innerText=msg; h.classList.add('show'); setTimeout(()=>h.classList.remove('show'),2000); }
+    // --------------------------------------------------------------
+    // IMAGE LOADING
+    // --------------------------------------------------------------
+    function loadImageFromURL(url,callback){
+        let img=new Image();img.crossOrigin="Anonymous";
+        img.onload=()=>{
+            let sw=stageDiv.clientWidth,sh=stageDiv.clientHeight,scale=Math.min(sw/img.width,sh/img.height,1);
+            let w=Math.round(img.width*scale),h=Math.round(img.height*scale),ox=(sw-w)/2,oy=(sh-h)/2;
+            [bgCanvas,drCanvas,rulerCanvas].forEach(c=>{c.width=w;c.height=h;c.style.left=ox+'px';c.style.top=oy+'px';c.style.position='absolute';});
+            bgCtx.drawImage(img,0,0,w,h);drCtx.clearRect(0,0,w,h);rulerCtx.clearRect(0,0,w,h);
+            undoStack=[];saveToUndo();document.getElementById('empty').style.display='none';
+            if(callback)callback(w,h);hint("Image loaded.");
+        };
+        img.onerror=()=>{if(callback)callback(null);};img.src=url;
+    }
+    function loadImageFile(file){let url=URL.createObjectURL(file);loadImageFromURL(url,()=>URL.revokeObjectURL(url));}
+    document.getElementById('img-file').onchange=e=>{if(e.target.files[0])loadImageFile(e.target.files[0]);};
+    stageDiv.addEventListener('dragover',e=>e.preventDefault());
+    stageDiv.addEventListener('drop',e=>{e.preventDefault();let f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f)loadImageFile(f);});
 
-  // Start
-  buildTasks();
-  renderTaskList();
-  loadStoredMaps().then(() => {
-    buildCalculator();
-    setTool('pen');
-    hint("Ready. Click 'Load folder with images' to import all .png files from your folder.");
-  });
+    // --------------------------------------------------------------
+    // SAVE / LOAD MAPS
+    // --------------------------------------------------------------
+    function getCurrentFullImage(){
+        if(!bgCanvas.width)return null;
+        let full=document.createElement('canvas');full.width=bgCanvas.width;full.height=bgCanvas.height;
+        let ctx=full.getContext('2d');ctx.drawImage(bgCanvas,0,0);ctx.drawImage(drCanvas,0,0);return full.toDataURL('image/jpeg',0.85);
+    }
+    function saveMap(){
+        let fullData=getCurrentFullImage();if(!fullData){hint("Load an image first");return;}
+        let name=prompt("Name for this map:","map_"+new Date().toLocaleTimeString());if(!name)return;
+        let taskSnapshot=tasks.map(t=>({id:t.id,done:t.done}));
+        let thumbCanvas=document.createElement('canvas'),tw=100,th=(bgCanvas.height/bgCanvas.width)*100;
+        thumbCanvas.width=tw;thumbCanvas.height=th;
+        let tctx=thumbCanvas.getContext('2d'),tempImg=new Image();
+        tempImg.onload=()=>{
+            tctx.drawImage(tempImg,0,0,tw,th);let thumb=thumbCanvas.toDataURL('image/jpeg',0.5);
+            let entry={id:Date.now(),name,fullData,thumb,date:new Date().toISOString(),taskSnapshot};
+            savedMaps.unshift(entry);if(savedMaps.length>20)savedMaps.pop();
+            localStorage.setItem('skychart_full_maps',JSON.stringify(savedMaps));renderSavedMaps();hint("Map saved (drawing + task progress)");
+        };tempImg.src=fullData;
+    }
+    function loadSavedMap(entry){
+        let img=new Image();
+        img.onload=()=>{
+            let sw=stageDiv.clientWidth,sh=stageDiv.clientHeight,scale=Math.min(sw/img.width,sh/img.height,1);
+            let w=Math.round(img.width*scale),h=Math.round(img.height*scale),ox=(sw-w)/2,oy=(sh-h)/2;
+            [bgCanvas,drCanvas,rulerCanvas].forEach(c=>{c.width=w;c.height=h;c.style.left=ox+'px';c.style.top=oy+'px';});
+            bgCtx.drawImage(img,0,0,w,h);drCtx.clearRect(0,0,w,h);undoStack=[];saveToUndo();
+            document.getElementById('empty').style.display='none';
+            if(entry.taskSnapshot){tasks.forEach(t=>{let f=entry.taskSnapshot.find(ts=>ts.id===t.id);if(f)t.done=f.done;});saveTaskProgressLocally();renderTaskList();}
+            hint("Map loaded with tasks state");
+        };img.src=entry.fullData;
+    }
+    function deleteMap(id){savedMaps=savedMaps.filter(m=>m.id!==id);localStorage.setItem('skychart_full_maps',JSON.stringify(savedMaps));renderSavedMaps();}
+    function renderSavedMaps(){
+        let container=document.getElementById('saved-list');if(!container)return;
+        container.innerHTML='';
+        savedMaps.forEach(m=>{
+            let div=document.createElement('div');div.className='map-card';
+            div.innerHTML=`<img class="map-thumb" src="${m.thumb}"><div class="map-info"><div class="map-title">${m.name}</div><div>${new Date(m.date).toLocaleString()}</div></div><div class="map-actions"><button class="btn" data-load="${m.id}">load</button><button class="btn" data-del="${m.id}">delete</button></div>`;
+            div.querySelector('[data-load]')?.addEventListener('click',e=>{e.stopPropagation();loadSavedMap(m);});
+            div.querySelector('[data-del]')?.addEventListener('click',e=>{e.stopPropagation();deleteMap(m.id);});
+            container.appendChild(div);
+        });
+    }
+
+    // --------------------------------------------------------------
+    // LOAD FOLDER (manual picker)
+    // --------------------------------------------------------------
+    function loadAllImagesFromFolder(){
+        let input=document.createElement('input');input.type='file';input.webkitdirectory=true;input.multiple=true;
+        input.onchange=async(e)=>{
+            let files=Array.from(e.target.files);
+            let pngFiles=files.filter(f=>f.name.toLowerCase().endsWith('.png'));
+            if(pngFiles.length===0){hint("No .png files found in selected folder.");return;}
+            let addedCount=0;
+            for(let file of pngFiles){
+                let name=file.name.replace(/\.png$/i,'');
+                if(savedMaps.some(m=>m.name===name))continue;
+                let url=URL.createObjectURL(file);
+                await new Promise(resolve=>{
+                    let img=new Image();
+                    img.onload=()=>{
+                        let canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;
+                        canvas.getContext('2d').drawImage(img,0,0);let fullData=canvas.toDataURL('image/jpeg',0.85);
+                        let tw=100,th=(img.height/img.width)*100,thumbCanvas=document.createElement('canvas');
+                        thumbCanvas.width=tw;thumbCanvas.height=th;thumbCanvas.getContext('2d').drawImage(img,0,0,tw,th);
+                        let thumb=thumbCanvas.toDataURL('image/jpeg',0.5);
+                        savedMaps.push({id:Date.now()+addedCount+Math.random()*10000,name,fullData,thumb,date:new Date().toISOString(),taskSnapshot:tasks.map(t=>({id:t.id,done:false}))});
+                        addedCount++;URL.revokeObjectURL(url);resolve();
+                    };
+                    img.onerror=()=>{URL.revokeObjectURL(url);resolve();};img.src=url;
+                });
+            }
+            if(addedCount>0){localStorage.setItem('skychart_full_maps',JSON.stringify(savedMaps));renderSavedMaps();hint(`Added ${addedCount} map(s) from folder.`);}
+            else hint("No new .png images found or all already added.");
+        };input.click();
+    }
+    document.getElementById('load-folder-btn').onclick=loadAllImagesFromFolder;
+
+    // --------------------------------------------------------------
+    // AUTO-LOAD DEFAULT IMAGES from ./skycharts/ using fixed array
+    // --------------------------------------------------------------
+    async function loadDefaultImages(){
+        if(!DEFAULT_IMAGES.length) return;
+        let addedCount=0;
+        for(let filename of DEFAULT_IMAGES){
+            let name=filename.replace(/\.png$/i,'');
+            if(savedMaps.some(m=>m.name===name)) continue;
+            await new Promise(resolve=>{
+                let img=new Image();
+                img.onload=()=>{
+                    let canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;
+                    canvas.getContext('2d').drawImage(img,0,0);
+                    let fullData=canvas.toDataURL('image/jpeg',0.85);
+                    let tw=100,th=(img.height/img.width)*100,thumbCanvas=document.createElement('canvas');
+                    thumbCanvas.width=tw;thumbCanvas.height=th;
+                    thumbCanvas.getContext('2d').drawImage(img,0,0,tw,th);
+                    let thumb=thumbCanvas.toDataURL('image/jpeg',0.5);
+                    savedMaps.push({
+                        id:Date.now()+addedCount+Math.random()*10000,
+                        name,fullData,thumb,
+                        date:new Date().toISOString(),
+                        taskSnapshot:tasks.map(t=>({id:t.id,done:false}))
+                    });
+                    addedCount++;resolve();
+                };
+                img.onerror=()=>{
+                    console.warn(`skycharts/${filename} not found — skipping.`);
+                    resolve();
+                };
+                img.src=SKYCHARTS_FOLDER+filename;
+            });
+        }
+        if(addedCount>0){
+            localStorage.setItem('skychart_full_maps',JSON.stringify(savedMaps));
+            renderSavedMaps();
+            hint(`Loaded ${addedCount} default map(s) from skycharts/`);
+        }
+    }
+
+    // --------------------------------------------------------------
+    // STORED MAPS
+    // --------------------------------------------------------------
+    async function loadStoredMaps(){
+        let stored=localStorage.getItem('skychart_full_maps');
+        savedMaps=stored?JSON.parse(stored):[];
+        renderSavedMaps();
+    }
+
+    // --------------------------------------------------------------
+    // CALCULATOR
+    // --------------------------------------------------------------
+    function buildCalculator(){
+        const container=document.getElementById('calc-buttons');
+        const buttons=['7','8','9','/','C','4','5','6','*','(','1','2','3','-',')','0','.','=','+','^','sin','cos','tan','asin','acos','atan','log','ln','sqrt','π','e','x²','1/x','!','clr'];
+        container.innerHTML='';let calcExpr='';let display=document.getElementById('calc-display');
+        const updateDisplay=()=>{display.innerText=calcExpr||'0';};
+        const factorial=n=>{if(n<0)return NaN;if(n<=1)return 1;let r=1;for(let i=2;i<=n;i++)r*=i;return r;};
+        const evaluate=()=>{
+            try{
+                let expr=calcExpr.replace(/π/g,'Math.PI').replace(/e/g,'Math.E').replace(/\^/g,'**')
+                    .replace(/sin\(/g,'Math.sin(').replace(/cos\(/g,'Math.cos(').replace(/tan\(/g,'Math.tan(')
+                    .replace(/asin\(/g,'Math.asin(').replace(/acos\(/g,'Math.acos(').replace(/atan\(/g,'Math.atan(')
+                    .replace(/log\(/g,'Math.log10(').replace(/ln\(/g,'Math.log(').replace(/sqrt\(/g,'Math.sqrt(')
+                    .replace(/x²/g,'**2').replace(/1\/x/g,'1/').replace(/!\(?(\d+)\)?/,(_,n)=>factorial(parseInt(n)));
+                calcExpr=Function('"use strict";return ('+expr+')')().toString();updateDisplay();
+            }catch(e){display.innerText='Error';calcExpr='';}
+        };
+        buttons.forEach(btn=>{
+            let b=document.createElement('button');b.textContent=btn;
+            b.onclick=()=>{
+                if(btn==='C'||btn==='clr'){calcExpr='';updateDisplay();return;}
+                if(btn==='='){evaluate();return;}
+                if(btn==='π')calcExpr+='π';else if(btn==='e')calcExpr+='e';
+                else if(btn==='x²')calcExpr+='^2';else if(btn==='1/x')calcExpr+='1/';
+                else if(btn==='!')calcExpr+='!';else calcExpr+=btn;
+                updateDisplay();
+            };
+            if(['/','*','-','+','^','sin','cos','tan','asin','acos','atan','log','ln','sqrt','x²','1/x','!','π','e'].includes(btn))b.classList.add('operator');
+            if(btn==='=')b.classList.add('equals');
+            if(btn==='C'||btn==='clr')b.classList.add('clear');
+            container.appendChild(b);
+        });
+    }
+
+    // --------------------------------------------------------------
+    // UI
+    // --------------------------------------------------------------
+    function setTool(tool){
+        currentTool=tool;document.querySelectorAll('.tool').forEach(btn=>btn.classList.remove('on'));
+        document.getElementById(`t-${tool}`)?.classList.add('on');
+        if(tool!=='ruler'){rulerPoints=[];rulerCtx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);}
+        hint({pen:"Pen",line:"Line",rect:"Rectangle",circle:"Circle",text:"Text",erase:"Eraser",ruler:"Ruler (pixels)"}[tool]||tool);
+    }
+    document.getElementById('t-pen').onclick=()=>setTool('pen');
+    document.getElementById('t-line').onclick=()=>setTool('line');
+    document.getElementById('t-rect').onclick=()=>setTool('rect');
+    document.getElementById('t-circle').onclick=()=>setTool('circle');
+    document.getElementById('t-text').onclick=()=>setTool('text');
+    document.getElementById('t-erase').onclick=()=>setTool('erase');
+    document.getElementById('t-ruler').onclick=()=>setTool('ruler');
+    document.getElementById('t-calc').onclick=()=>document.getElementById('calc-modal').style.display='flex';
+    document.getElementById('calc-close').onclick=()=>document.getElementById('calc-modal').style.display='none';
+    document.getElementById('calc-modal').onclick=e=>{if(e.target===document.getElementById('calc-modal'))document.getElementById('calc-modal').style.display='none';};
+    document.getElementById('color-picker').oninput=e=>drawColor=e.target.value;
+    document.getElementById('size-slider').oninput=e=>{lineWidth=+e.target.value;document.getElementById('size-val').innerText=lineWidth;};
+    document.getElementById('undo-btn').onclick=()=>restoreUndo();
+    document.getElementById('clear-drawing').onclick=()=>clearDrawing();
+    document.getElementById('save-map-btn').onclick=()=>saveMap();
+    document.getElementById('export-png-btn').onclick=()=>{
+        if(!bgCanvas.width)return;
+        let full=document.createElement('canvas');full.width=bgCanvas.width;full.height=bgCanvas.height;
+        let ctx=full.getContext('2d');ctx.drawImage(bgCanvas,0,0);ctx.drawImage(drCanvas,0,0);
+        let a=document.createElement('a');a.download=`skychart_${Date.now()}.png`;a.href=full.toDataURL();a.click();
+    };
+    document.getElementById('tab-tasks').onclick=()=>{
+        document.getElementById('tasks-panel').style.display='flex';
+        document.getElementById('saved-maps-pane').style.display='none';
+    };
+    document.getElementById('tab-saved').onclick=()=>{
+        document.getElementById('tasks-panel').style.display='none';
+        document.getElementById('saved-maps-pane').style.display='flex';
+        renderSavedMaps();
+    };
+    function hint(msg){let h=document.getElementById('hint');h.innerText=msg;h.classList.add('show');setTimeout(()=>h.classList.remove('show'),2000);}
+
+    // --------------------------------------------------------------
+    // START
+    // --------------------------------------------------------------
+    buildTasks();
+    renderTaskList();
+    loadStoredMaps().then(async()=>{
+        await loadDefaultImages(); // always ensure default images exist in saved maps
+        buildCalculator();
+        setTool('pen');
+        hint("Ready. Default images from array are always present in Saved maps.");
+    });
 </script>
 </body>
 </html>
