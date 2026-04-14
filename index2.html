@@ -35,33 +35,6 @@
         .task-item:hover { background: var(--bg2); }
         .task-item.done { text-decoration: line-through; color: var(--text3); }
         .task-label { flex: 1; }
-
-        /* Custom notes / întrebări */
-        #custom-notes-panel {
-            border-top: 1px solid var(--border);
-            padding: 8px;
-            background: var(--bg2);
-            flex-shrink: 0;
-        }
-        #custom-notes-panel .notes-title {
-            font-size: 10px; font-weight: bold; color: var(--text3);
-            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        #custom-notes-list { max-height: 160px; overflow-y: auto; margin-bottom: 6px; }
-        .custom-note-item {
-            display: flex; align-items: flex-start; gap: 5px;
-            padding: 3px 2px; font-size: 11px;
-        }
-        .custom-note-item input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
-        .custom-note-item .note-text { flex: 1; word-break: break-word; }
-        .custom-note-item.done .note-text { text-decoration: line-through; color: var(--text3); }
-        .custom-note-item .del-note { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 12px; padding: 0 2px; }
-        .custom-note-item .del-note:hover { color: #c00; }
-        #custom-note-input-row { display: flex; gap: 4px; }
-        #custom-note-input { flex: 1; padding: 3px 5px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 11px; }
-        #add-note-btn { padding: 3px 8px; font-size: 11px; }
-
         #saved-maps-pane { display: none; flex-direction: column; height: 100%; }
         #saved-list { flex: 1; overflow-y: auto; padding: 6px; }
         .map-card { display: flex; gap: 8px; border: 1px solid var(--border); border-radius: 6px; padding: 6px; margin-bottom: 6px; cursor: pointer; background: #fff; }
@@ -88,7 +61,7 @@
 </head>
 <body>
 <div id="top">
-    <span id="logo">SKYCHART TASKS</span>
+    <span id="logo">SKYCHART · ASTRONOMY TASKS</span>
     <div class="sep"></div>
     <label class="btn" for="img-file">Load single image</label>
     <input type="file" id="img-file" accept="image/*" style="display:none">
@@ -119,7 +92,7 @@
             <button id="tab-tasks" class="btn" style="flex:1;border-radius:0;">Tasks</button>
             <button id="tab-saved" class="btn" style="flex:1;border-radius:0;">Saved maps</button>
         </div>
-        <div id="tasks-panel" style="display:flex; flex-direction:column; height:100%; overflow:hidden;">
+        <div id="tasks-panel" style="display:flex; flex-direction:column; height:100%;">
             <div id="task-header">
                 <input type="text" id="task-search" placeholder="Search constellation / Messier...">
                 <div class="category-filter">
@@ -130,19 +103,6 @@
                 </div>
             </div>
             <div id="task-list"></div>
-
-            <!-- Custom notes / întrebări proprii -->
-            <div id="custom-notes-panel">
-                <div class="notes-title">
-                    <span>📝 My Questions</span>
-                    <button class="btn" id="clear-done-notes" title="Șterge bifate" style="font-size:10px;padding:2px 6px;">✕ Delete checked ones</button>
-                </div>
-                <div id="custom-notes-list"></div>
-                <div id="custom-note-input-row">
-                    <input type="text" id="custom-note-input" placeholder="Add a new question...">
-                    <button class="btn" id="add-note-btn">+</button>
-                </div>
-            </div>
         </div>
         <div id="saved-maps-pane">
             <div id="saved-list"></div>
@@ -174,7 +134,9 @@
 
 <script>
     // ================================================================
-    //  FIXED ARRAY WITH ALL DEFAULT IMAGES
+    //  FIXED ARRAY WITH ALL DEFAULT IMAGES (edit as needed)
+    //  These images will be automatically added to Saved Maps on startup
+    //  and will always be present.
     // ================================================================
     const DEFAULT_IMAGES = [
         'lat90long0.png',
@@ -216,14 +178,12 @@
         if(i===31)name+=" (Andromeda)";if(i===42)name+=" (Orion)";if(i===45)name+=" (Pleiades)";
         MESSIER.push(name);
     }
-    // SPECIAL TASKS — am adăugat Poles
     const SPECIAL_TASKS=[
         {id:"lst",text:"Estimate LST (Local Sidereal Time)"},
         {id:"season",text:"Determine season (at midnight)"},
         {id:"equator",text:"Draw CELESTIAL EQUATOR"},
         {id:"ecliptic",text:"Draw ECLIPTIC"},
-        {id:"galactic",text:"Draw GALACTIC PLANE"},
-        {id:"poles",text:"Identify CELESTIAL POLES"}
+        {id:"galactic",text:"Draw GALACTIC PLANE"}
     ];
 
     // --------------------------------------------------------------
@@ -236,52 +196,6 @@
     let currentTool='pen',drawColor='#d44000',lineWidth=2;
     let drawing=false,lastX=0,lastY=0,lineStart=null,snapImage=null;
     let undoStack=[],rulerPoints=[],tasks=[],filterText='',activeCategory='all',savedMaps=[];
-
-    // Custom notes (global — salvate global in localStorage)
-    let customNotes = []; // [{id, text, done}]
-
-    // --------------------------------------------------------------
-    // CUSTOM NOTES
-    // --------------------------------------------------------------
-    function loadCustomNotes(){
-        try{ customNotes = JSON.parse(localStorage.getItem('skychart_custom_notes')||'[]'); }
-        catch(e){ customNotes=[]; }
-    }
-    function saveCustomNotes(){
-        localStorage.setItem('skychart_custom_notes', JSON.stringify(customNotes));
-    }
-    function renderCustomNotes(){
-        const list = document.getElementById('custom-notes-list');
-        list.innerHTML='';
-        customNotes.forEach(note=>{
-            let row = document.createElement('div');
-            row.className = 'custom-note-item' + (note.done?' done':'');
-            let cb = document.createElement('input'); cb.type='checkbox'; cb.checked=note.done;
-            cb.onchange=()=>{ note.done=cb.checked; saveCustomNotes(); renderCustomNotes(); };
-            let span = document.createElement('span'); span.className='note-text'; span.innerText=note.text;
-            let del = document.createElement('button'); del.className='del-note'; del.innerText='✕';
-            del.onclick=()=>{ customNotes=customNotes.filter(n=>n.id!==note.id); saveCustomNotes(); renderCustomNotes(); };
-            row.appendChild(cb); row.appendChild(span); row.appendChild(del);
-            list.appendChild(row);
-        });
-    }
-    function addCustomNote(text){
-        if(!text.trim()) return;
-        customNotes.push({id: Date.now()+Math.random(), text: text.trim(), done: false});
-        saveCustomNotes();
-        renderCustomNotes();
-    }
-    document.getElementById('add-note-btn').onclick=()=>{
-        let inp = document.getElementById('custom-note-input');
-        addCustomNote(inp.value); inp.value='';
-    };
-    document.getElementById('custom-note-input').addEventListener('keydown', e=>{
-        if(e.key==='Enter'){ let inp=e.target; addCustomNote(inp.value); inp.value=''; }
-    });
-    document.getElementById('clear-done-notes').onclick=()=>{
-        customNotes = customNotes.filter(n=>!n.done);
-        saveCustomNotes(); renderCustomNotes();
-    };
 
     // --------------------------------------------------------------
     // TASKS
@@ -376,7 +290,7 @@
     stageDiv.addEventListener('drop',e=>{e.preventDefault();let f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f)loadImageFile(f);});
 
     // --------------------------------------------------------------
-    // SAVE / LOAD MAPS — include customNotes snapshot
+    // SAVE / LOAD MAPS
     // --------------------------------------------------------------
     function getCurrentFullImage(){
         if(!bgCanvas.width)return null;
@@ -387,16 +301,14 @@
         let fullData=getCurrentFullImage();if(!fullData){hint("Load an image first");return;}
         let name=prompt("Name for this map:","map_"+new Date().toLocaleTimeString());if(!name)return;
         let taskSnapshot=tasks.map(t=>({id:t.id,done:t.done}));
-        // Include custom notes snapshot in the saved map
-        let notesSnapshot = customNotes.map(n=>({id:n.id,text:n.text,done:n.done}));
         let thumbCanvas=document.createElement('canvas'),tw=100,th=(bgCanvas.height/bgCanvas.width)*100;
         thumbCanvas.width=tw;thumbCanvas.height=th;
         let tctx=thumbCanvas.getContext('2d'),tempImg=new Image();
         tempImg.onload=()=>{
             tctx.drawImage(tempImg,0,0,tw,th);let thumb=thumbCanvas.toDataURL('image/jpeg',0.5);
-            let entry={id:Date.now(),name,fullData,thumb,date:new Date().toISOString(),taskSnapshot,notesSnapshot};
+            let entry={id:Date.now(),name,fullData,thumb,date:new Date().toISOString(),taskSnapshot};
             savedMaps.unshift(entry);if(savedMaps.length>20)savedMaps.pop();
-            localStorage.setItem('skychart_full_maps',JSON.stringify(savedMaps));renderSavedMaps();hint("Map saved (drawing + task progress + notes)");
+            localStorage.setItem('skychart_full_maps',JSON.stringify(savedMaps));renderSavedMaps();hint("Map saved (drawing + task progress)");
         };tempImg.src=fullData;
     }
     function loadSavedMap(entry){
@@ -408,12 +320,7 @@
             bgCtx.drawImage(img,0,0,w,h);drCtx.clearRect(0,0,w,h);undoStack=[];saveToUndo();
             document.getElementById('empty').style.display='none';
             if(entry.taskSnapshot){tasks.forEach(t=>{let f=entry.taskSnapshot.find(ts=>ts.id===t.id);if(f)t.done=f.done;});saveTaskProgressLocally();renderTaskList();}
-            // Restore custom notes from map snapshot
-            if(entry.notesSnapshot){
-                customNotes = entry.notesSnapshot.map(n=>({id:n.id,text:n.text,done:n.done}));
-                saveCustomNotes(); renderCustomNotes();
-            }
-            hint("Map loaded with tasks state + notes");
+            hint("Map loaded with tasks state");
         };img.src=entry.fullData;
     }
     function deleteMap(id){savedMaps=savedMaps.filter(m=>m.id!==id);localStorage.setItem('skychart_full_maps',JSON.stringify(savedMaps));renderSavedMaps();}
@@ -451,7 +358,7 @@
                         let tw=100,th=(img.height/img.width)*100,thumbCanvas=document.createElement('canvas');
                         thumbCanvas.width=tw;thumbCanvas.height=th;thumbCanvas.getContext('2d').drawImage(img,0,0,tw,th);
                         let thumb=thumbCanvas.toDataURL('image/jpeg',0.5);
-                        savedMaps.push({id:Date.now()+addedCount+Math.random()*10000,name,fullData,thumb,date:new Date().toISOString(),taskSnapshot:tasks.map(t=>({id:t.id,done:false})),notesSnapshot:[]});
+                        savedMaps.push({id:Date.now()+addedCount+Math.random()*10000,name,fullData,thumb,date:new Date().toISOString(),taskSnapshot:tasks.map(t=>({id:t.id,done:false}))});
                         addedCount++;URL.revokeObjectURL(url);resolve();
                     };
                     img.onerror=()=>{URL.revokeObjectURL(url);resolve();};img.src=url;
@@ -464,7 +371,7 @@
     document.getElementById('load-folder-btn').onclick=loadAllImagesFromFolder;
 
     // --------------------------------------------------------------
-    // AUTO-LOAD DEFAULT IMAGES from ./skycharts/
+    // AUTO-LOAD DEFAULT IMAGES from ./skycharts/ using fixed array
     // --------------------------------------------------------------
     async function loadDefaultImages(){
         if(!DEFAULT_IMAGES.length) return;
@@ -486,12 +393,14 @@
                         id:Date.now()+addedCount+Math.random()*10000,
                         name,fullData,thumb,
                         date:new Date().toISOString(),
-                        taskSnapshot:tasks.map(t=>({id:t.id,done:false})),
-                        notesSnapshot:[]
+                        taskSnapshot:tasks.map(t=>({id:t.id,done:false}))
                     });
                     addedCount++;resolve();
                 };
-                img.onerror=()=>{ console.warn(`skycharts/${filename} not found — skipping.`); resolve(); };
+                img.onerror=()=>{
+                    console.warn(`skycharts/${filename} not found — skipping.`);
+                    resolve();
+                };
                 img.src=SKYCHARTS_FOLDER+filename;
             });
         }
@@ -593,10 +502,8 @@
     // --------------------------------------------------------------
     buildTasks();
     renderTaskList();
-    loadCustomNotes();
-    renderCustomNotes();
     loadStoredMaps().then(async()=>{
-        await loadDefaultImages();
+        await loadDefaultImages(); // always ensure default images exist in saved maps
         buildCalculator();
         setTool('pen');
         hint("Ready. Default images from array are always present in Saved maps.");
